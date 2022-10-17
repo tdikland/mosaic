@@ -51,7 +51,7 @@ object ST_ConcaveHull {
         new ExpressionInfo(
           classOf[ST_ConcaveHull].getCanonicalName,
           db.orNull,
-          "st_convexhull",
+          "st_concavehull",
           """
             |    _FUNC_(expr1, ratio, allow_holes) - Returns the concave hull for a given MultiPoint geometry.
             """.stripMargin,
