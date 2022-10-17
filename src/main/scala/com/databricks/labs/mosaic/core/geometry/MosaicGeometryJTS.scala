@@ -10,6 +10,7 @@ import com.databricks.labs.mosaic.core.types.model.GeometryTypeEnum
 import com.databricks.labs.mosaic.core.types.model.GeometryTypeEnum._
 import com.esotericsoftware.kryo.Kryo
 import org.apache.spark.sql.catalyst.InternalRow
+import org.locationtech.jts.algorithm.hull.ConcaveHull
 import org.locationtech.jts.geom.{Geometry, GeometryCollection}
 import org.locationtech.jts.geom.util.AffineTransformation
 import org.locationtech.jts.io._
@@ -106,11 +107,22 @@ abstract class MosaicGeometryJTS(geom: Geometry) extends MosaicGeometry {
 
     override def equals(other: java.lang.Object): Boolean = false
 
+    override def equalsTopo(other: MosaicGeometry): Boolean = {
+        var otherGeom = other.asInstanceOf[MosaicGeometryJTS].getGeom
+        this.geom.equalsTopo(otherGeom)
+    }
+
     override def hashCode: Int = geom.hashCode()
 
     override def getLength: Double = geom.getLength
 
     override def distance(geom2: MosaicGeometry): Double = getGeom.distance(geom2.asInstanceOf[MosaicGeometryJTS].getGeom)
+
+    override def concaveHull(lengthRatio: Double, allowHoles: Boolean): MosaicGeometryJTS = {
+        val concaveHull = ConcaveHull.concaveHullByLengthRatio(geom, lengthRatio, allowHoles)
+        concaveHull.setSRID(geom.getSRID)
+        MosaicGeometryJTS(concaveHull)
+    }
 
     override def convexHull: MosaicGeometryJTS = {
         val convexHull = geom.convexHull()
