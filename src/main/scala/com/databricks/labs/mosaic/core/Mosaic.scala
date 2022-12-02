@@ -11,6 +11,7 @@ import com.databricks.labs.mosaic.core.types.model.{GeometryTypeEnum, MosaicChip
 import com.databricks.labs.mosaic.core.types.model.GeometryTypeEnum._
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 
 /**
   * Single abstracted logic for mosaic fill via [[IndexSystem]]. [[IndexSystem]]
@@ -77,13 +78,38 @@ object Mosaic {
                 geometry.boundary.buffer(radius * 1.01).simplify(0.01 * radius)
             }
 
-        val coreIndices = indexSystem.polyfill(carvedGeometry, resolution, Some(geometryAPI))
-        val borderIndices = indexSystem.polyfill(borderGeometry, resolution, Some(geometryAPI)).diff(coreIndices)
+//        val coreIndices = indexSystem.polyfill(carvedGeometry, resolution, Some(geometryAPI))
+//        val borderIndices = indexSystem.polyfill(borderGeometry, resolution, Some(geometryAPI)).diff(coreIndices)
+//
+//        val coreChips = indexSystem.getCoreChips(coreIndices, keepCoreGeom, geometryAPI)
+//        val borderChips = indexSystem.getBorderChips(geometry, borderIndices, keepCoreGeom, geometryAPI)
+//
+//        coreChips ++ borderChips
+        val quadrants = Seq(
+          "POLYGON (0 90, 90 90, 90 -90, 0 -90, 0 90)",
+          "POLYGON (90 90, 180 90, 180 -90, 90 -90, 90 90)",
+          "POLYGON (-90 90, 0 90, 0 -90, -90 -90, -90 90)",
+          "POLYGON (-180 90, -90 90, -180 -90, -180 -90, -180 90)"
+        )
 
-        val coreChips = indexSystem.getCoreChips(coreIndices, keepCoreGeom, geometryAPI)
-        val borderChips = indexSystem.getBorderChips(geometry, borderIndices, keepCoreGeom, geometryAPI)
+        val chips = mutable.MutableList[MosaicChip]()
+        for (q <- quadrants) {
+            val carved_geom_quartered = carvedGeometry.intersection(geometryAPI.geometry(q, "WKT"))
+            val border_geom_quartered = borderGeometry.intersection(geometryAPI.geometry(q, "WKT"))
 
-        coreChips ++ borderChips
+            val coreIndices = indexSystem.polyfill(carved_geom_quartered, resolution, Some(geometryAPI))
+            val borderIndices = indexSystem.polyfill(border_geom_quartered, resolution, Some(geometryAPI)).diff(coreIndices)
+            val coreChips = indexSystem.getCoreChips(coreIndices, keepCoreGeom, geometryAPI)
+            val borderChips = indexSystem.getBorderChips(geometry, borderIndices, keepCoreGeom, geometryAPI)
+
+            val q_chips = coreChips ++ borderChips
+            for (c <- q_chips) {
+                chips += c
+            }
+        }
+
+        chips.asInstanceOf[Seq[MosaicChip]]
+
     }
 
     def lineFill(geometry: MosaicGeometry, resolution: Int, indexSystem: IndexSystem, geometryAPI: GeometryAPI): Seq[MosaicChip] = {
