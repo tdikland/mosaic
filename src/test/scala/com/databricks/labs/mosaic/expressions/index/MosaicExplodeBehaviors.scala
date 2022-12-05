@@ -14,6 +14,26 @@ import org.scalatest.matchers.should.Matchers._
 //noinspection ScalaDeprecation
 trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
 
+    def wktTessellateGlobe(mosaicContext: MosaicContext): Unit = {
+        if (mosaicContext.getIndexSystem != H3IndexSystem) {
+            return
+        }
+
+        val mc = mosaicContext
+        val sc = spark
+        import mc.functions._
+        import sc.implicits._
+        mc.register(spark)
+
+        val globe = Seq("POLYGON ((180 90, -180 90, -180 -90, 180 -90, 180 90))").toDF("geom")
+        val mosaics = globe
+            .select(grid_tessellateexplode(col("geom"), 0))
+            .select($"index.index_id")
+            .collect()
+
+        mosaics.length shouldEqual 122
+    }
+
     def wktDecompose(mosaicContext: MosaicContext): Unit = {
         spark.sparkContext.setLogLevel("FATAL")
         val mc = mosaicContext
@@ -198,7 +218,7 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
                     )
                 val res = noEmptyChips.collect()
                 res.length should be > 0
-            case _ => // do nothing
+            case _             => // do nothing
         }
 
     }
@@ -306,7 +326,7 @@ trait MosaicExplodeBehaviors extends MosaicSpatialQueryTest {
         noException should be thrownBy funcs.grid_tessellateexplode(col("wkt"), 3, keepCoreGeometries = true)
         noException should be thrownBy funcs.grid_tessellateexplode(col("wkt"), 3, lit(false))
         noException should be thrownBy funcs.grid_tessellateexplode(col("wkt"), lit(3), lit(false))
-        //legacy APIs
+        // legacy APIs
         noException should be thrownBy funcs.mosaic_explode(col("wkt"), 3)
         noException should be thrownBy funcs.mosaic_explode(col("wkt"), lit(3))
         noException should be thrownBy funcs.mosaic_explode(col("wkt"), 3, keepCoreGeometries = true)

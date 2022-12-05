@@ -232,7 +232,7 @@ trait MosaicFillBehaviors extends MosaicSpatialQueryTest {
         noException should be thrownBy funcs.grid_tessellate(col("wkt"), 3, keepCoreGeometries = true)
         noException should be thrownBy funcs.grid_tessellate(col("wkt"), lit(3), keepCoreGeometries = true)
         noException should be thrownBy funcs.grid_tessellate(col("wkt"), lit(3), lit(false))
-        //legacy API
+        // legacy API
         noException should be thrownBy funcs.mosaicfill(col("wkt"), lit(3))
         noException should be thrownBy funcs.mosaicfill(col("wkt"), 3)
         noException should be thrownBy funcs.mosaicfill(col("wkt"), 3, keepCoreGeometries = true)

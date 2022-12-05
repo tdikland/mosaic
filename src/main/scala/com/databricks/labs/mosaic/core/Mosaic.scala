@@ -78,38 +78,33 @@ object Mosaic {
                 geometry.boundary.buffer(radius * 1.01).simplify(0.01 * radius)
             }
 
-//        val coreIndices = indexSystem.polyfill(carvedGeometry, resolution, Some(geometryAPI))
-//        val borderIndices = indexSystem.polyfill(borderGeometry, resolution, Some(geometryAPI)).diff(coreIndices)
-//
-//        val coreChips = indexSystem.getCoreChips(coreIndices, keepCoreGeom, geometryAPI)
-//        val borderChips = indexSystem.getBorderChips(geometry, borderIndices, keepCoreGeom, geometryAPI)
-//
-//        coreChips ++ borderChips
-        val quadrants = Seq(
-          "POLYGON (0 90, 90 90, 90 -90, 0 -90, 0 90)",
-          "POLYGON (90 90, 180 90, 180 -90, 90 -90, 90 90)",
-          "POLYGON (-90 90, 0 90, 0 -90, -90 -90, -90 90)",
-          "POLYGON (-180 90, -90 90, -180 -90, -180 -90, -180 90)"
-        )
-
-        val chips = mutable.MutableList[MosaicChip]()
-        for (q <- quadrants) {
-            val carved_geom_quartered = carvedGeometry.intersection(geometryAPI.geometry(q, "WKT"))
-            val border_geom_quartered = borderGeometry.intersection(geometryAPI.geometry(q, "WKT"))
-
-            val coreIndices = indexSystem.polyfill(carved_geom_quartered, resolution, Some(geometryAPI))
-            val borderIndices = indexSystem.polyfill(border_geom_quartered, resolution, Some(geometryAPI)).diff(coreIndices)
+        // H3 polyfill cannot work with polygons that span over more than 180 degrees latitude
+        if (borderGeometry.minMaxCoord("X", "MAX") - borderGeometry.minMaxCoord("X", "MIN") < 180) {
+            val coreIndices = indexSystem.polyfill(carvedGeometry, resolution, Some(geometryAPI))
+            val borderIndices = indexSystem.polyfill(borderGeometry, resolution, Some(geometryAPI)).diff(coreIndices)
             val coreChips = indexSystem.getCoreChips(coreIndices, keepCoreGeom, geometryAPI)
             val borderChips = indexSystem.getBorderChips(geometry, borderIndices, keepCoreGeom, geometryAPI)
 
-            val q_chips = coreChips ++ borderChips
-            for (c <- q_chips) {
-                chips += c
-            }
+            return coreChips ++ borderChips
+        } else {
+            val quadrants = Seq(
+              "POLYGON ((0 90, 90 90, 90 -90, 0 -90, 0 90))",
+              "POLYGON ((90 90, 180 90, 180 -90, 90 -90, 90 90))",
+              "POLYGON ((-90 90, 0 90, 0 -90, -90 -90, -90 90))",
+              "POLYGON ((-180 90, -90 90, -90 -90, -180 -90, -180 90))"
+            )
+
+            return quadrants
+                .map(geometryAPI.geometry(_, "WKT"))
+                .flatMap(q => {
+                    val cIndices = indexSystem.polyfill(carvedGeometry.intersection(q).buffer(0), resolution, Some(geometryAPI))
+                    val bIndices =
+                        indexSystem.polyfill(borderGeometry.intersection(q).buffer(0), resolution, Some(geometryAPI)).diff(cIndices)
+                    val cChips = indexSystem.getCoreChips(cIndices, keepCoreGeom, geometryAPI)
+                    val bChips = indexSystem.getBorderChips(geometry, bIndices, keepCoreGeom, geometryAPI)
+                    cChips ++ bChips
+                })
         }
-
-        chips.asInstanceOf[Seq[MosaicChip]]
-
     }
 
     def lineFill(geometry: MosaicGeometry, resolution: Int, indexSystem: IndexSystem, geometryAPI: GeometryAPI): Seq[MosaicChip] = {
