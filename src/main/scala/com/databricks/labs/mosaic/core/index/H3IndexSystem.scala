@@ -98,17 +98,12 @@ object H3IndexSystem extends IndexSystem(LongType) with Serializable {
     override def indexToGeometry(index: Long, geometryAPI: GeometryAPI): MosaicGeometry = {
         val boundary = h3.h3ToGeoBoundary(index).asScala
         val extended = boundary ++ List(boundary.head)
-        val g = geometryAPI.geometry(
-          extended.map(p => geometryAPI.fromGeoCoord(Coordinates(p.lat, p.lng))),
-          POLYGON
-        )
-
-        if (!g.isValid) {
-            println("invalid")
-        }
-
-        g
-
+        geometryAPI
+            .geometry(
+              extended.map(p => geometryAPI.fromGeoCoord(Coordinates(p.lat, p.lng))),
+              POLYGON
+            )
+            .buffer(0)
     }
 
     /**
@@ -218,10 +213,12 @@ object H3IndexSystem extends IndexSystem(LongType) with Serializable {
     override def indexToGeometry(index: String, geometryAPI: GeometryAPI): MosaicGeometry = {
         val boundary = h3.h3ToGeoBoundary(index).asScala
         val extended = boundary ++ List(boundary.head)
-        geometryAPI.geometry(
-          extended.map(p => geometryAPI.fromGeoCoord(Coordinates(p.lat, p.lng))),
-          POLYGON
-        )
+        geometryAPI
+            .geometry(
+              extended.map(p => geometryAPI.fromGeoCoord(Coordinates(p.lat, p.lng))),
+              POLYGON
+            )
+            .buffer(0)
     }
 
     override def format(id: Long): String = {
