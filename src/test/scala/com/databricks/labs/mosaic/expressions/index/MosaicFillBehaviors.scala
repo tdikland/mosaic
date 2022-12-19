@@ -7,6 +7,7 @@ import com.databricks.labs.mosaic.test.{mocks, MosaicSpatialQueryTest}
 import com.databricks.labs.mosaic.test.mocks.getBoroughs
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.functions.{size => arrayColumnSize}
 import org.apache.spark.sql.types._
 import org.scalatest.matchers.should.Matchers._
 
@@ -166,6 +167,26 @@ trait MosaicFillBehaviors extends MosaicSpatialQueryTest {
             .collect()
 
         boroughs.collect().length shouldEqual mosaics2.length
+    }
+
+    def wktMosaicTessellate(mosaicContext: MosaicContext): Unit = {
+        val mc = mosaicContext
+        val sc = spark
+        mc.register(sc)
+        import sc.implicits._
+        import mc.functions._
+
+        val geom = Seq("POLYGON ((5.26 52.72, 5.20 52.71, 5.21 52.75, 5.26 52.75, 5.26 52.72))").toDF("wkt")
+        val mosaics = geom
+            .select(
+              grid_tessellate(col("wkt"), 3).alias("tessellation")
+            )
+            .select(arrayColumnSize($"tessellation.chips").alias("number_of_chips"))
+            .select($"number_of_chips")
+            .collect()
+            .map(_.getInt(0))
+
+        mosaics.foreach { case i => assert(i > 0, "tessellation has no chips") }
     }
 
     def mosaicFillPoints(mosaicContext: MosaicContext): Unit = {
