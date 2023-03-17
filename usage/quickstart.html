@@ -263,6 +263,13 @@
       <a href="../api/spatial-aggregations.html" class="md-nav__link">Spatial aggregation functions</a>
       
     
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="../api/raster-functions.html" class="md-nav__link">Raster functions</a>
+      
+    
     </li></ul>
     
     </li>
@@ -275,6 +282,13 @@
     
     
       <a href="installation.html" class="md-nav__link">Installation guide</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="install-gdal.html" class="md-nav__link">GDAL Installation guide</a>
       
     
     </li>
@@ -1259,12 +1273,12 @@ only showing top 20 rows
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>from mosaic import polyfill
+<div class="input_area highlight-none notranslate"><div class="highlight"><pre><span></span>from mosaic import grid_polyfill
 
 neighbourhoods = (
   geoJsonDF
   .repartition(sc.defaultParallelism)
-  .select("*", explode(polyfill("geometry", lit(10))).alias("h3"))
+  .select("*", explode(grid_polyfill("geometry", lit(10))).alias("h3"))
   .drop("geometry")
 )
 
